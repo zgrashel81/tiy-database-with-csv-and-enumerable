@@ -1,63 +1,75 @@
-class Person
-  attr_reader "name", "phone_number", "address", "position", "salary", "slack_account", "github_account"
+require 'csv'
+require 'erb'
 
-  def initialize(name, phone_number, address, position, salary, slack_account, github_account)
+class Person
+  attr_reader "name", "phone", "address", "position", "salary", "slack", "github"
+
+  def initialize(name, phone, address, position, salary, slack, github)
     @name = name
-    @phone_number = phone_number
+    @phone = phone
     @address = address
     @position = position
     @salary = salary
-    @slack_account = slack_account
-    @github_account = github_account
+    @slack = slack
+    @github = github
   end
 end
 
 class EmployeeDatabase
+  attr_reader "profiles"
+
   def initialize
     @profiles = []
+    CSV.foreach("employees.csv", headers: true) do |row|
+      name = row["name"]
+      phone = row["phone"]
+      address = row["address"]
+      position = row["position"]
+      salary = row["salary"]
+      slack = row["slack"]
+      github = row["github"]
+
+      person = Person.new(name, phone, address, position, salary.to_i, slack, github)
+
+      @profiles << person
+    end
   end
 
   def initial_question
-    puts "(A) Add a profile (S) Search for a profile (D) Delete a profile "
-    initial = gets.chomp.upcase
+    puts '(A) Add a profile (S) Search for a profile (D) Delete a profile (E) View employee report '
+    initial = gets.chomp
   end
 
   def add_person
-    puts "What is the name? "
+    puts "What is your name?"
     name = gets.chomp
+    if @profiles.find { |person| person.name == name }
+      puts "This profile already exists"
+    else
+      puts "What is the phone number?"
+      phone = gets.chomp.to_i
 
-    if name.empty?
-      puts "Name can not be black! "
+      puts "What is the address?"
+      address = gets.chomp
+
+      puts "What position?"
+      position = gets.chomp
+
+      puts "What salary?"
+      salary = gets.chomp.to_i
+
+      puts "What is the Slack Account?"
+      slack = gets.chomp
+
+      puts "What is the Git Account?"
+      github = gets.chomp
+
+      person = Person.new(name, phone, address, position, salary.to_i, slack, github)
+
+      @profiles << person
+
+      employee_save
     end
-
-    puts "What is the phone_number?"
-    phone_number = gets.chomp
-
-    puts "What is the address?"
-    address = gets.chomp
-
-    puts "What position?"
-    position = gets.chomp
-
-    puts "What salary?"
-    salary = gets.chomp.to_i
-
-    puts "What is the slack_account?"
-    slack_account = gets.chomp
-
-    puts "What is the github_account?"
-    github_account = gets.chomp
-
-    person = Person.new(name, phone_number, address, position, salary, slack_account, github_account)
-
-    @profiles << person
-
-    puts "You have added #{name}."
-    puts "#{name}\'s phone_number is #{phone_number}."
-    puts "#{name} lives at #{address}."
-    puts "Their position with the company is #{position} and they make $#{salary} a year."
-    puts "The slack_account is #{slack_account}."
-    puts "The gitHub_account is #{github_account}.\n\n"
   end
 
   def search_person
@@ -66,22 +78,22 @@ class EmployeeDatabase
     found_account = @profiles.find { |person| person.name.include?(search_person) || person.slack_account == search_person || person.github_account == search_person }
     if found_account
       puts "This is #{found_account.name}'s information.
-      \nName: #{found_account.name}
-      \nPhone: #{found_account.phone_number}
-      \nAddress: #{found_account.address}
-      \nPosition: #{found_account.position}
-      \nSalary: #{found_account.salary}
-      \nSlack Account: #{found_account.slack_account}
-      \nGitHub Account: #{found_account.github_account}"
+        \nName: #{found_account.name}
+        \nPhone: #{found_account.phone}
+        \nAddress: #{found_account.address}
+        \nPosition: #{found_account.position}
+        \nSalary: #{found_account.salary}
+        \nSlack Account: #{found_account.slack}
+        \nGitHub Account: #{found_account.github}"
     else
-        puts "#{search_person} is not in our system.\n"
+      puts "#{search_person} is not in our system.\n"
     end
   end
 
   def delete_person
     print "Please type in persons name. "
     delete_name = gets.chomp
-    delete_profile = @profiles.delete_if { |person| person.name == delete_name}
+    delete_profile = @profiles.delete_if { |person| person.name == delete_name }
     if delete_profile
       puts "profile deleted"
     else
@@ -89,21 +101,59 @@ class EmployeeDatabase
     end
   end
 
-  def main
-    user_input = ()
-    while user_input != ""
-      user_input = initial_question
-      if user_input == "A"
-        add_person
-      elsif user_input == "S"
-        search_person
-      elsif user_input == "D"
-        delete_person
-      else
-      puts "That was not an option!"
+  def employee_save
+    CSV.open("employees.csv", "w") do |csv|
+      csv << %W[name phone address position salary slack github]
+      @profiles.each do |person|
+        csv << [person.name, person.phone, person.address, person.position, person.salary, person.slack, person.github]
       end
     end
   end
-end
 
-EmployeeDatabase.new.main
+  def employee_report
+  employee_accounts = @profiles.sort_by(&:name)
+  employee_accounts.each do |person|
+  end
+  puts "The Iron Yard Database Reports: "
+  puts "The Instructors total salary: #{instructor_salary}"
+  puts "The Campus Directors total salary: #{director_salary}"
+  puts "The total number of students at the Iron Yard: #{total_students}"
+  puts "The total number of Instructor at the Iron Yard: #{total_instructor}"
+  puts "The total number of Campus Directors at the Iron Yard: #{total_director}"
+  end
+
+  def instructor_salary
+  @profiles.select { |person| person.position.include?("Instructor") }.map { |person| person.salary }.sum
+  end
+
+  def director_salary
+  @profiles.select { |person| person.position.include?("Campus Director") }.map { |person| person.salary }.sum
+  end
+
+  def total_instructor
+  @profiles.select { |person| person.position.include?("Intructor") }.count
+  end
+
+  def total_director
+  @profiles.select { |person| person.position.include?("Campus Director") }.count
+  end
+
+  def total_students
+  @profiles.select { |person| person.position.include?("Student") }.count
+  end
+
+  data = EmployeeDatabase.new
+
+  loop do
+    puts "Add a profile (A), Search (S) or Delete (D) Check the employee report (E)"
+    selected = gets.chomp.upcase
+
+    data.add_person if selected == 'A'
+
+    data.search_person if selected == 'S'
+
+    data.delete_person if selected == 'D'
+
+    data.employee_report if selected == 'E'
+  end
+end
